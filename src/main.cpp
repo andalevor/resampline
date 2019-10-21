@@ -10,35 +10,36 @@
 
 using namespace std;
 
-vector<pair<double,double>> get_data(params &p);
-vector<pair<double,double>> parse_input(istream &input);
-vector<pair<double,double>> resample(vector<pair<double,double>> &pairs,
-									 params &p);
-void data_output(vector<pair<double,double>> &result, params &p);
-void print_result(vector<pair<double,double>> &result, ostream &out);
+vector<pair<double, double>> get_data(params &p);
+vector<pair<double, double>> parse_input(istream &input);
+vector<pair<double, double>> resample(vector<pair<double, double>> &pairs,
+									  params &p);
+void data_output(vector<pair<double, double>> &result, params &p);
+void print_result(vector<pair<double, double>> &result, params &p, ostream &out);
 
 int main(int argc, char **argv)
 {
-	try {
+	try
+	{
 		if (argc < 2)
 			throw error(string("Not enouth parameters.") +
-					   	"\n\nUsage: " + argv[0] + " if=\"inputfile\" "
-	  					"of=\"output_file\" step=\"number\" [OPTIONAL]"
-						"\n\nIf either or both input and output files are not set,"
-						"\nSTDIN or STDOUT respectively will be used."
-						"\nEach input line should consist of X and Y pairs "
-						"with witespace delimiter."
-						"\n\nOptional parameters:"
-						"\n\tstart=\tValue in units(meters or feet). "
-						"Could be used to set start point"
-						"\n\t\tif first point in input file is not the start. "
-						"\n\t\tIt is assumed that first point in input is 0."
-						"\n\t\tSo everything before first point should be set "
-						"as negative value."
-						"\n\tend=\tValue in units(meters or feet). "
-						"Could be used to set end point"
-						"\n\t\tif last point in input is not the end."
-						"\n\t\tIt is recommended to always set the \"end=\" value.");
+						"\n\nUsage: " + argv[0] + " if=\"inputfile\" "
+												  "of=\"output_file\" step=\"number\" [OPTIONAL]"
+												  "\n\nIf either or both input and output files are not set,"
+												  "\nSTDIN or STDOUT respectively will be used."
+												  "\nEach input line should consist of X and Y pairs "
+												  "with witespace delimiter."
+												  "\n\nOptional parameters:"
+												  "\n\tstart=\tValue in units(meters or feet). "
+												  "Could be used to set start point"
+												  "\n\t\tif first point in input file is not the start. "
+												  "\n\t\tIt is assumed that first point in input is 0."
+												  "\n\t\tSo everything before first point should be set "
+												  "as negative value."
+												  "\n\tend=\tValue in units(meters or feet). "
+												  "Could be used to set end point"
+												  "\n\t\tif last point in input is not the end."
+												  "\n\t\tIt is recommended to always set the \"end=\" value.");
 
 		params par = parse_params(argc, argv);
 		auto pairs = get_data(par);
@@ -46,18 +47,24 @@ int main(int argc, char **argv)
 			throw error("Not enouth data");
 		auto result = resample(pairs, par);
 		data_output(result, par);
-	} catch(exception& e) {
-		cerr << "Error occurred:\n" << e.what() << endl;
+	}
+	catch (exception &e)
+	{
+		cerr << "Error occurred:\n"
+			 << e.what() << endl;
 		return 1;
 	}
 }
 
-vector<pair<double,double>> get_data(params &p)
+vector<pair<double, double>> get_data(params &p)
 {
-	vector<pair<double,double>> pairs;
-	if (p.in_file.empty()) {
+	vector<pair<double, double>> pairs;
+	if (p.in_file.empty())
+	{
 		pairs = parse_input(cin);
-	} else {
+	}
+	else
+	{
 		ifstream in_file(p.in_file);
 		if (in_file)
 			pairs = parse_input(in_file);
@@ -65,38 +72,43 @@ vector<pair<double,double>> get_data(params &p)
 	return pairs;
 }
 
-vector<pair<double,double>> parse_input(istream &input)
+vector<pair<double, double>> parse_input(istream &input)
 {
-	vector<pair<double,double>> vec;
+	vector<pair<double, double>> vec;
 	input.exceptions(istream::badbit | istream::failbit);
-	try {
+	try
+	{
 		double first, second;
 		char ch;
-		while (true) {
+		while (true)
+		{
 			input >> first >> second;
-			vec.push_back(make_pair(first,second));
+			vec.push_back(make_pair(first, second));
 			input.get(ch);
 			if (ch != '\n' && ch != '\r')
 				throw error("More then two numbers in row");
 		}
-	} catch (ifstream::failure &e) {
+	}
+	catch (ifstream::failure &e)
+	{
 		if (!input.eof())
 			throw ifstream::failure("No such file of wrong data format");
 	}
 	return vec;
 }
 
-vector<pair<double,double>> resample(vector<pair<double,double>> &pairs,
-									 params &p)
+vector<pair<double, double>> resample(vector<pair<double, double>> &pairs,
+									  params &p)
 {
-	vector<pair<double,double>> result;
+	vector<pair<double, double>> result;
 	double first_x, first_y, second_x, second_y, azimuth, length = 0, dx, dy, x, y,
-		   third_x, third_y, alpha, beta, gamma, a, b, c, total = 0;
+														  third_x, third_y, alpha, beta, gamma, a, b, c, total = 0;
 	int steps;
 	decltype(pairs.size()) counter = 0;
 
 	//if start is far from first point we need find line with start point
-	do {
+	do
+	{
 		p.start -= length;
 		first_x = pairs[counter].first;
 		first_y = pairs[counter].second;
@@ -110,7 +122,8 @@ vector<pair<double,double>> resample(vector<pair<double,double>> &pairs,
 	y = first_y;
 	//find azimuth for first line
 	azimuth = atan2(second_y - first_y, second_x - first_x);
-	if (p.start) {
+	if (p.start)
+	{
 		x += cos(azimuth) * p.start;
 		y += sin(azimuth) * p.start;
 	}
@@ -118,13 +131,15 @@ vector<pair<double,double>> resample(vector<pair<double,double>> &pairs,
 	steps = length / p.step;
 	dx = cos(azimuth) * p.step;
 	dy = sin(azimuth) * p.step;
-	for (int i = 0; i < steps; ++i) {
+	for (int i = 0; i < steps; ++i)
+	{
 		x += dx;
 		y += dy;
 		result.push_back(make_pair(x, y));
 		total += p.step;
 	}
-	for (decltype(pairs.size()) i = counter + 1; i < pairs.size(); ++i) {
+	for (decltype(pairs.size()) i = counter + 1; i < pairs.size(); ++i)
+	{
 		third_x = pairs[i].first;
 		third_y = pairs[i].second;
 		//consider a triangle with sides a, b, c and angles alpha, beta, gamma
@@ -161,7 +176,8 @@ vector<pair<double,double>> resample(vector<pair<double,double>> &pairs,
 		steps = length / p.step;
 		dx = cos(azimuth) * p.step;
 		dy = sin(azimuth) * p.step;
-		for (int i = 0; i < steps; ++i) {
+		for (int i = 0; i < steps; ++i)
+		{
 			x += dx;
 			y += dy;
 			result.push_back(make_pair(x, y));
@@ -172,8 +188,10 @@ vector<pair<double,double>> resample(vector<pair<double,double>> &pairs,
 		second_x = third_x;
 		second_y = third_y;
 	}
-	if (p.end) {
-		while (total < p.end - p.start) {
+	if (p.end)
+	{
+		while (total < p.end - p.start)
+		{
 			x += dx;
 			y += dy;
 			result.push_back(make_pair(x, y));
@@ -184,29 +202,38 @@ vector<pair<double,double>> resample(vector<pair<double,double>> &pairs,
 	return result;
 }
 
-void data_output(vector<pair<double,double>> &result, params &p)
+void data_output(vector<pair<double, double>> &result, params &p)
 {
-	if (p.out_file.empty()) {
-		print_result(result, cout);
-	} else {
+	if (p.out_file.empty())
+	{
+		print_result(result, p, cout);
+	}
+	else
+	{
 		ofstream out_file(p.out_file);
 		if (out_file)
-			print_result(result, out_file);
+			print_result(result, p, out_file);
 	}
 }
 
-void print_result(vector<pair<double,double>> &result, ostream &out)
+void print_result(vector<pair<double, double>> &result, params &p, ostream &out)
 {
 	vector<int> field_length;
 	field_length.push_back(to_string(result.size()).length());
+	field_length.push_back(to_string(static_cast<long>((result.size() - 1) * p.step)).length() + 2);
 	field_length.push_back(to_string(static_cast<long>(result[0].first)).length() + 2);
 	field_length.push_back(to_string(static_cast<long>(result[0].second)).length() + 2);
 
 	out.exceptions(istream::badbit | istream::failbit);
 	decltype(result.size()) counter = 0;
+	decltype(p.start) curr = p.start;
 	for (const auto &v : result)
+	{
 		out << setprecision(1) << fixed << " "
-		   	<< setw(field_length[0]) << ++counter << " "
-			<< setw(field_length[1]) << v.first   << " "
-			<< setw(field_length[2]) << v.second  << endl;
+			<< setw(field_length[0]) << ++counter << " "
+			<< setw(field_length[1]) << curr << " "
+			<< setw(field_length[2]) << v.first << " "
+			<< setw(field_length[3]) << v.second << endl;
+		curr += p.step;
+	}
 }
